@@ -1,0 +1,4 @@
+{
+    "thunder-client.httpLibrary": "axios",
+    "thunder-client.previewFeatures": true
+}
