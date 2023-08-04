@@ -1,30 +1,32 @@
 'use strict'
 const express = require('express')
-const app = express()
-const port = 3000
-require('dotenv').config()
 const cors = require('cors')
+const axios = require('axios')
+require('dotenv').config()
+const app = express()
 app.use(cors())
-const weatherData = require('./data/weather.json')
 
-const PORT = process.env.PORT || 3002
+const PORT = process.env.PORT || 3001
 
 app.get('/', (req, res, next) => {
     res.status(200).send('default route working')
 });
 
-app.get('/weather', (req, res, next) => {
+app.get('/weather', async (req, res, next) => {
     try {
         const lat = req.query.lat
         const lon = req.query.lon
         const searchQuery = req.query.searchQuery;
-        //const type = req.query.type;
-        //console.log(searchQuery)
-        const cityResultData = weatherData.find(( city ) => city.city_name === searchQuery || ( city.lon === lon && city.lat === lat )).data
-        const forecastData = cityResultData.map(day => {
-            return new Forecast({ date: day.datetime, description: day.weather.description })
+        const weatherUrl = `${process.env.WEATHER_API_URL}` + 
+                           `?key=${process.env.WEATHER_API_KEY}` +
+                           `&units=I` +
+                           `&lat=${lat}&lon=${lon}`
+        const weatherData = await axios.get(weatherUrl)
+        const cityForecastData = weatherData.data.data.map((day) => {
+            return new Forecast({ date: day.valid_date, description: day.weather.description })
         })
-        res.status( 200 ).send( forecastData )
+
+        res.status( 200 ).send( cityForecastData )
     } catch( error ) {
         next( error )
     }
