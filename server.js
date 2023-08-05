@@ -1,30 +1,66 @@
 'use strict'
 const express = require('express')
-const app = express()
-const port = 3000
-require('dotenv').config()
 const cors = require('cors')
+const axios = require('axios')
+require('dotenv').config()
+const app = express()
 app.use(cors())
-const weatherData = require('./data/weather.json')
 
-const PORT = process.env.PORT || 3002
+const PORT = process.env.PORT || 3001
 
 app.get('/', (req, res, next) => {
     res.status(200).send('default route working')
 });
 
-app.get('/weather', (req, res, next) => {
+app.get('/movies', async (req, res, next) => {
     try {
-        const lat = req.query.lat
-        const lon = req.query.lon
-        const searchQuery = req.query.searchQuery;
-        //const type = req.query.type;
-        //console.log(searchQuery)
-        const cityResultData = weatherData.find(( city ) => city.city_name === searchQuery || ( city.lon === lon && city.lat === lat )).data
-        const forecastData = cityResultData.map(day => {
-            return new Forecast({ date: day.datetime, description: day.weather.description })
+        const { searchQuery } = req.query
+        const movieUrl = `${process.env.MOVIE_API_URL}` +
+                         `?include_adult=false&language=en-US&page=1` +
+                         `&query=${searchQuery}`
+        const config = {
+            headers:{
+                Authorization: `Bearer ${process.env.MOVIE_API_KEY}`
+            }
+        };
+        const movieResults = await axios.get(movieUrl, config);
+        const movieData = movieResults.data.results.map( movie => {
+            return new Movie({ 'title': movie.title, 'popularity': movie.popularity })
         })
-        res.status( 200 ).send( forecastData )
+        .sort((a,b) => {
+            if (a.popularity > b.popularity) {
+                return -1
+            }
+            if (a.popularity < b.popularity) {
+                return 1
+            }
+            return 0
+        })
+        res.status( 200 ).send( movieData )
+    }catch (err){
+        next(err)
+    }
+})
+
+class Movie {
+    constructor(obj) {
+        this.title = obj.title
+        this.popularity = obj.popularity
+    }
+}
+
+app.get('/weather', async (req, res, next) => {
+    try {
+        const { lat, lon, searchQuery } = req.query
+        const weatherUrl = `${process.env.WEATHER_API_URL}` + 
+                           `?key=${process.env.WEATHER_API_KEY}` +
+                           `&units=I` +
+                           `&lat=${lat}&lon=${lon}`
+        const weatherData = await axios.get(weatherUrl)
+        const cityForecastData = weatherData.data.data.map((day) => {
+            return new Forecast({ date: day.valid_date, description: day.weather.description })
+        })
+        res.status( 200 ).send( cityForecastData )
     } catch( error ) {
         next( error )
     }
