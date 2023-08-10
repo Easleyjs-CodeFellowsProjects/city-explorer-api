@@ -1,5 +1,6 @@
 'use strict'
 require('dotenv').config()
+require('./data/cache')
 const express = require('express')
 const cors = require('cors')
 const getMovies = require('./routes/movies')
@@ -10,7 +11,7 @@ app.use(cors())
 const PORT = process.env.PORT || 3001
 
 app.get('/', (req, res, next) => {
-    res.status(200).send('default route working')
+    res.status(200).send('Default Route')
 });
 
 app.get('/movies', getMovies);
